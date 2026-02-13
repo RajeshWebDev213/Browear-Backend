@@ -24,7 +24,14 @@ const SendOTP = async (email) => {
     throw error;
   }
 };
-
+const ResendOtp =async ()=>{
+      await resend.emails.send({
+      from: process.env.EMAIL_USER, 
+      to: email,
+      subject: "Your OTP Verification",
+      text: `Your OTP is ${otp}`
+    });
+}
 const VerifyOTP = (email, otp) => {
   return otpStore[email] == otp;
 };
@@ -33,4 +40,4 @@ const DeleteOTP = (email) => {
   delete otpStore[email];
 };
 
-module.exports = { SendOTP, VerifyOTP, DeleteOTP };
+module.exports = { SendOTP, VerifyOTP, DeleteOTP,ResendOtp };
