@@ -16,7 +16,7 @@ const SendOTP = async (email) => {
       subject: "Your OTP Verification",
       text: `Your OTP is ${otp}`
     });
-
+    
     console.log("OTP sent successfully to:", email);
 
   } catch (error) {
