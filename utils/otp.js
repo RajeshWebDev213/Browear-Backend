@@ -9,15 +9,14 @@ const SendOTP = async (email)=>{
 
     otpStore[email] = otp;
 
-   const Transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true, 
+ const Transporter = nodemailer.createTransport({
+  service: "gmail",
   auth: {
-    user: process.env.Email,
-    pass: process.env.Pass
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
   }
 });
+
     const Mailoptions = {
         from:process.env.Email,
         to: email,
