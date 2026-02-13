@@ -10,7 +10,7 @@ const router = express.Router();
 
 router.post("/send-otp", async (req, res) => {
   const { email, password } = req.body;
-
+   console.log("Signup route hit");
   if (!email || !password) {
     return res.status(400).json({ message: "Email and password required" });
   }
