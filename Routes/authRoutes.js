@@ -4,13 +4,16 @@ const jwt = require("jsonwebtoken");
 
 const { Database } = require("../Database");
 const { SendOTP, VerifyOTP, DeleteOTP } = require("../utils/otp");
-const {CreateToken, auth } = require("../Middleware/VerifyToken");
+const { CreateToken, auth } = require("../Middleware/VerifyToken");
 
 const router = express.Router();
 
+/* ===========================
+   SEND OTP
+=========================== */
 router.post("/send-otp", async (req, res) => {
   const { email, password } = req.body;
-   console.log("Signup route hit");
+
   if (!email || !password) {
     return res.status(400).json({ message: "Email and password required" });
   }
@@ -19,11 +22,14 @@ router.post("/send-otp", async (req, res) => {
     await SendOTP(email);
     res.json({ message: "OTP sent successfully" });
   } catch (err) {
-    console.error(err);
+    console.error("SEND OTP ERROR:", err);
     res.status(500).json({ message: "Failed to send OTP" });
   }
 });
 
+/* ===========================
+   VERIFY OTP + SIGNUP
+=========================== */
 router.post("/verify-otp", async (req, res) => {
   try {
     const { email, password, otp } = req.body;
@@ -37,48 +43,74 @@ router.post("/verify-otp", async (req, res) => {
       return res.status(400).json({ message: "Invalid OTP" });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const sql = `
-      INSERT INTO signupusersData (email, password, is_otp_verified, role)
-      VALUES (?, ?, ?, ?)
-    `;
-
-    Database.query(
-      sql,
-      [email, hashedPassword, true, "user"],
-      (err, result) => {
-        if (err) {
-          return res.status(500).json({ message: "User already exists" });
-        }
-
-        DeleteOTP(email);
-
-        const token = CreateToken({
-          user_id: result.insertId,
-          email,
-          role: "user",
-        });
-
-        return res.json({
-          message: "OTP verified & signup successful",
-          token,
-        });
+    // ✅ Check if user already exists FIRST
+    const checkSql = "SELECT * FROM signupusersData WHERE email = ?";
+    Database.query(checkSql, [email], async (err, result) => {
+      if (err) {
+        console.error("CHECK USER ERROR:", err);
+        return res.status(500).json({ message: "Database error" });
       }
-    );
+
+      if (result.length > 0) {
+        return res.status(400).json({ message: "User already exists" });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const insertSql = `
+        INSERT INTO signupusersData 
+        (email, password, is_otp_verified, role)
+        VALUES (?, ?, ?, ?)
+      `;
+
+      Database.query(
+        insertSql,
+        [email, hashedPassword, true, "user"],
+        (err, insertResult) => {
+          if (err) {
+            console.error("INSERT USER ERROR:", err);
+            return res.status(500).json({ message: "Signup failed" });
+          }
+
+          DeleteOTP(email);
+
+          // ✅ Consistent token structure
+          const token = CreateToken({
+            id: insertResult.insertId,
+            email,
+            role: "user",
+          });
+
+          return res.json({
+            message: "Signup successful",
+            token,
+          });
+        }
+      );
+    });
   } catch (err) {
-    console.error(err);
+    console.error("VERIFY OTP ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
+/* ===========================
+   LOGIN
+=========================== */
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ message: "Email and password required" });
+  }
 
   const sql = "SELECT * FROM signupusersData WHERE email = ?";
 
   Database.query(sql, [email], async (err, result) => {
-    if (err) return res.status(500).json({ message: "DB error" });
+    if (err) {
+      console.error("LOGIN SQL ERROR:", err);
+      return res.status(500).json({ message: "Database error" });
+    }
 
     if (result.length === 0) {
       return res.status(401).json({ message: "User not found" });
@@ -92,25 +124,27 @@ router.post("/login", async (req, res) => {
     }
 
     const token = CreateToken({
-      id: user.id,
+      id: user.id, // ✅ consistent
       email: user.email,
       role: user.role,
     });
 
     res.json({
+      message: "Login successful",
       token,
       user: {
         id: user.id,
         email: user.email,
-        fullname: user.username,
+        fullname: user.Username || "",
         role: user.role,
       },
     });
   });
 });
 
-
-
+/* ===========================
+   SAVE PERSONAL DETAILS
+=========================== */
 router.post("/personal", auth, (req, res) => {
   const { fullname, gender, dob, phonenumber } = req.body;
   const email = req.user.email;
@@ -131,7 +165,7 @@ router.post("/personal", auth, (req, res) => {
     (err) => {
       if (err) {
         console.error("PERSONAL SQL ERROR:", err);
-        return res.status(500).json({ message: "DB error" });
+        return res.status(500).json({ message: "Database error" });
       }
 
       res.json({ message: "Personal details saved" });
@@ -139,10 +173,12 @@ router.post("/personal", auth, (req, res) => {
   );
 });
 
+/* ===========================
+   PLACE ORDER
+=========================== */
 router.post("/orders", auth, (req, res) => {
   const user_id = req.user.id;
-  console.log(user_id);
-  
+
   if (!user_id) {
     return res.status(401).json({ message: "Invalid token" });
   }
@@ -194,6 +230,7 @@ router.post("/orders", auth, (req, res) => {
         console.error("ORDER SQL ERROR:", err);
         return res.status(500).json({ message: "Order failed" });
       }
+
       res.json({
         message: "Order placed successfully",
         order_number,

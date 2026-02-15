@@ -19,6 +19,7 @@ Database.connect(err=>{
          }
          console.log("the user details are: ",result)
          
+         
     })
 })
 module.exports = {Database}
