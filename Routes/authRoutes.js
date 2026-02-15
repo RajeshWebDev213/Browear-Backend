@@ -173,6 +173,27 @@ router.post("/personal", auth, (req, res) => {
   );
 });
 
+/*=====================
+=======account ======== */
+router.get("/account", auth, (req, res) => {
+  const email = req.user.email;
+
+  const sql = `
+    SELECT id, email, Username, Gender, dateofbirth, phonenumber, role
+    FROM signupusersData
+    WHERE email = ?
+  `;
+
+  Database.query(sql, [email], (err, result) => {
+    if (err) return res.status(500).json({ message: "DB error" });
+
+    if (result.length === 0)
+      return res.status(404).json({ message: "User not found" });
+
+    res.json(result[0]);
+  });
+});
+
 /* ===========================
    PLACE ORDER
 =========================== */
