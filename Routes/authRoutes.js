@@ -8,9 +8,7 @@ const { CreateToken, auth } = require("../Middleware/VerifyToken");
 
 const router = express.Router();
 
-/* ===========================
-   SEND OTP
-=========================== */
+
 router.post("/send-otp", async (req, res) => {
   const { email, password } = req.body;
 
@@ -27,9 +25,7 @@ router.post("/send-otp", async (req, res) => {
   }
 });
 
-/* ===========================
-   VERIFY OTP + SIGNUP
-=========================== */
+
 router.post("/verify-otp", async (req, res) => {
   try {
     const { email, password, otp } = req.body;
@@ -43,13 +39,17 @@ router.post("/verify-otp", async (req, res) => {
       return res.status(400).json({ message: "Invalid OTP" });
     }
 
-    // ✅ Check if user already exists FIRST
+
     const checkSql = "SELECT * FROM signupusersData WHERE email = ?";
     Database.query(checkSql, [email], async (err, result) => {
-      if (err) {
-        console.error("CHECK USER ERROR:", err);
-        return res.status(500).json({ message: "Database error" });
-      }
+if (err) {
+  console.error("VERIFY OTP INSERT ERROR:", err);
+  return res.status(500).json({
+    message: "Database error",
+    error: err.message
+  });
+}
+
 
       if (result.length > 0) {
         return res.status(400).json({ message: "User already exists" });
