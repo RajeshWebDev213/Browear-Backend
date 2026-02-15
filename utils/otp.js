@@ -1,52 +1,31 @@
-const nodemailer = require("nodemailer");
+const sgMail = require("@sendgrid/mail");
+
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const otpStore = {};
 
-//  Create SMTP transporter
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false, 
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
-// ================= SEND OTP =================
 const SendOTP = async (email) => {
   try {
     const otp = Math.floor(100000 + Math.random() * 900000);
 
     otpStore[email] = otp;
 
-    await transporter.sendMail({
-      from: `"BroWear" <${process.env.EMAIL_USER}>`,
-      to: email,
+    await sgMail.send({
+      to: email, 
+      from: process.env.EMAIL_USER,
       subject: "Your OTP Verification",
-      text: `Your OTP is ${otp}`,
-      html: `
-        <h2>BroWear Email Verification</h2>
-        <p>Your OTP is:</p>
-        <h1>${otp}</h1>
-        <p>This OTP will expire soon.</p>
-      `,
+      html: `<h2>Your OTP is: ${otp}</h2>`,
     });
 
+    console.log("OTP sent to:", email);
   } catch (error) {
-    console.error("SMTP ERROR:", error);
+    console.error("SendGrid Error:", error.response?.body || error.message);
     throw error;
   }
 };
 
-// ================= VERIFY OTP =================
-const VerifyOTP = (email, otp) => {
-  return otpStore[email] == otp;
-};
+const VerifyOTP = (email, otp) => otpStore[email] == otp;
 
-// ================= DELETE OTP =================
-const DeleteOTP = (email) => {
-  delete otpStore[email];
-};
+const DeleteOTP = (email) => delete otpStore[email];
 
 module.exports = { SendOTP, VerifyOTP, DeleteOTP };
