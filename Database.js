@@ -2,16 +2,7 @@ const mysql = require("mysql2");
 const dotenv = require("dotenv");
 dotenv.config();
 
-const Database = mysql.createPool({
-  host: process.env.BroWear_DB_Host,
-  user: process.env.BroWear_DB_User,
-  password: process.env.BroWear_DB_Password,
-  database: process.env.BroWear_DB_Database,
-  port: process.env.BroWear_DB_Port,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-});
+const Database = mysql.createPool(process.env.MYSQL_PUBLIC_URL);
 
 
 Database.getConnection((err, connection) => {
